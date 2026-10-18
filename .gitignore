@@ -1,0 +1,10 @@
+node_modules/
+dist/
+.local/
+config.json
+*.sqlite
+*.sqlite-*
+*.log
+.env
+.env.*
+!.env.example

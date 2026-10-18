@@ -1,0 +1,7 @@
+{
+  "publicBaseUrl": "https://mcp.example.com",
+  "listenPort": 3000,
+  "workspaceDir": "/home/mcp/workspace",
+  "stateDir": "/var/lib/milanoreal-mcp",
+  "allowedRedirectUris": []
+}

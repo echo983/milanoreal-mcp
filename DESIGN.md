@@ -2,7 +2,7 @@
 
 日期：2026-10-19
 
-状态：经过自洽性、可行性与第一版复杂度审查的设计基线；不包含实现代码。
+状态：当前实现的架构说明。原设计基线保存在标签 `v0.1.0-design`；六工具、OAuth 与 VPS 部署现已实现，两端核心功能已通过用户实测。逐项验收状态见 [PLAN.md](PLAN.md)，证据见 [验证记录](docs/verification.md)。
 
 面向：个人使用的单台 Linux VPS，供 ChatGPT、Claude 的远程 MCP 客户端连接。
 
@@ -60,7 +60,7 @@ VPS 上分为两个 systemd 服务：应用服务和 `cloudflared`。应用只�
 
 ## 4. 与参考项目的关系
 
-参考 [Cloudflare sandbox-container](https://github.com/cloudflare/mcp-server-cloudflare/tree/main/apps/sandbox-container) 的工具划分、参数形式和文件内容返回方式。源码核对基线为该目录最近一次提交 `e4cf085520ea7286af77abf938d645c610ef1580`（2026-10-09）；后续实施时核对所选 SDK 的实际 API 和上游许可证。
+参考 [Cloudflare sandbox-container](https://github.com/cloudflare/mcp-server-cloudflare/tree/main/apps/sandbox-container) 的工具划分、参数形式和文件内容返回方式。源码核对基线为该目录最近一次提交 `e4cf085520ea7286af77abf938d645c610ef1580`（2026-10-09）；所选 SDK 的实际 API、版本与许可证核对记录见 [依赖说明](docs/dependencies.md)。
 
 上游初始化会销毁旧容器再创建新容器，运行逻辑要求容器预先启动，并存在不活动超时及生命周期回收。本项目保留工具概念，替换执行后端和生命周期，不能仅删除工具注册后直接运行上游代码。[生命周期源码](https://github.com/cloudflare/mcp-server-cloudflare/blob/e4cf085520ea7286af77abf938d645c610ef1580/apps/sandbox-container/server/userContainer.ts)
 
@@ -79,7 +79,7 @@ VPS 上分为两个 systemd 服务：应用服务和 `cloudflared`。应用只�
 
 ## 5. MCP 协议与 HTTP 路由
 
-采用 MCP SDK 支持的 Streamable HTTP，入口为 `/mcp`。协议版本通过 SDK 协商；包版本在实施时选择、锁定，不在本文猜测版本或手写 JSON-RPC 协议栈。
+采用 MCP SDK 支持的 Streamable HTTP，入口为 `/mcp`。协议版本通过 SDK 协商，依赖精确版本由 `package-lock.json` 锁定，选型记录见 [依赖说明](docs/dependencies.md)。不手写 JSON-RPC 协议栈。
 
 MCP 传输采用无状态模式，不依赖 MCP session ID 保存环境。客户端重新连接不会重建工作目录。协议握手按 SDK 正常处理；传输无状态不代表 OAuth 状态无持久化。
 
@@ -97,7 +97,7 @@ MCP 传输采用无状态模式，不依赖 MCP session ID 保存环境。客户
 
 资源标识统一为 `https://mcp.example.com/mcp`，issuer 为 `https://mcp.example.com`。两个资源元数据路径返回相同的 canonical resource。401 中明确提供实际元数据地址，避免客户端猜测路径。
 
-GET、POST、DELETE 和通知的处理遵循 SDK 的无状态传输支持，不自行声称支持旧式 HTTP+SSE，也不提供容易混淆的 `/sse` 别名。校验请求 Origin（存在时）及预期 Host，允许没有 Origin 的合法服务端客户端；不使用放行所有来源的 CORS 配置。[Streamable HTTP 规范](https://modelcontextprotocol.io/specification/2026-07-28/basic/transports/streamable-http)
+`/mcp` 只接受 POST，使用 SDK 无状态传输及 JSON 响应；通知由 SDK 处理。其他 HTTP 方法在认证后返回 405，不提供 GET SSE 流、会话删除或 `/sse` 别名。校验请求 Origin（存在时）及预期 Host，允许没有 Origin 的合法服务端客户端；不使用放行所有来源的 CORS 配置。[Streamable HTTP 规范](https://modelcontextprotocol.io/specification/2026-07-28/basic/transports/streamable-http)
 
 ## 6. 单用户 OAuth
 
@@ -107,7 +107,7 @@ GET、POST、DELETE 和通知的处理遵循 SDK 的无状态传输支持，不�
 
 用户添加 MCP 地址后，客户端发现 OAuth 配置并打开本站授权页。页面显示请求的客户端、回调目标和“执行命令及操作该系统用户可访问文件”的授权含义；用户输入强口令并批准，浏览器返回客户端。之后客户端携带独立的令牌访问 MCP，不携带强口令。
 
-强口令用于浏览器页面验证，不提供 OAuth password grant，不把它当固定 bearer token。口令只保存带盐的慢哈希，拟使用 Argon2id；初始化通过本地交互式管理命令完成，不在命令行参数或日志中传递明文。
+强口令用于浏览器页面验证，不提供 OAuth password grant，不把它当固定 bearer token。口令只保存带盐的 Argon2id 哈希；初始化通过本地交互式管理命令完成，不在命令行参数或日志中传递明文。至少 20 个字符，输入不回显。
 
 ### 6.2 协议实现边界
 
@@ -123,7 +123,7 @@ GET、POST、DELETE 和通知的处理遵循 SDK 的无状态传输支持，不�
 
 部署配置明确允许的回调 URI。回调不允许通配符或前缀匹配；在注册、授权、兑换时使用同一个已校验值。客户端名称是显示信息，不能作为身份认证依据。新回调未被允许时明确拒绝，管理员核对客户端显示的实际地址后更新配置并重试；不自动信任注册请求提供的地址。
 
-DCR 仅保存所需客户端元数据，不主动抓取客户端提供的 logo 或其他 URL。必须先用两端真实客户端确认 DCR + PKCE + `none` 可完成授权；如果实测要求其他方式，只补充有证据需要的机制，不提前实现三套注册方式。
+DCR 仅保存所需客户端元数据，不主动抓取客户端提供的 logo 或其他 URL。两端真实客户端已确认 DCR + PKCE + `none` 可完成授权；如果实测要求其他方式，只补充有证据需要的机制，不提前实现三套注册方式。
 
 按标准处理 `state`（原样返回客户端提供的值）、`resource`、scope、PKCE 和授权响应 issuer。本站另用不可预测的授权事务 ID、短期 HttpOnly/Secure/SameSite cookie 及 CSRF token 绑定批准操作。授权事务保存服务器校验后的参数，提交页面不能自行更换 client 或 redirect URI。
 
@@ -198,7 +198,7 @@ Linux 用户权限是文件访问边界，工作目录只是默认起点，不�
 | 同步命令最大超时 | 90 秒，作为工程常量按实测调整 |
 | 执行结果输出 | stdout + stderr 合计最多 128 KiB |
 | 单文件读取或写入 | 原始内容最多 1 MiB |
-| 单次目录列表 | 最多 1000 条，且响应大小最多 256 KiB |
+| 单次目录列表 | 最多 1000 条，列表 JSON 数据最多 256 KiB；MCP 包装和文本副本另有开销 |
 | HTTP 请求体 | 最多 8 MiB，容纳 1 MiB 文件内容的 JSON 转义开销 |
 | 并行前台命令 | 最多 2 个，额外调用立即返回 busy，避免排队耗尽客户端等待时间 |
 
@@ -212,7 +212,7 @@ Linux 用户权限是文件访问边界，工作目录只是默认起点，不�
 
 使用固定 `/bin/bash -c`，从工作目录启动非交互、非 login Shell。不自动读取用户交互式 `.bashrc`，不隐式持久化 `export`、`cd` 或虚拟环境激活状态。要改变目录或使用 Python venv，应在同一次命令中明确指定。
 
-子进程只接收整理后的环境，例如该用户的 HOME、USER、LOGNAME、SHELL、LANG、PATH、TMPDIR 及管理员显式配置的执行变量；不继承应用 OAuth 配置、HTTP 凭据或隧道凭据。PATH 包含系统常用目录及用户的 `.local/bin`，具体工具链由部署者准备。
+子进程只接收整理后的 HOME、USER、LOGNAME、SHELL、LANG、PATH、TMPDIR 和固定 TERM。当前无自定义执行环境配置，不继承应用 OAuth 配置、HTTP 凭据或隧道凭据。PATH 包含当前 Node 可执行文件目录、系统常用目录及用户的 `.local/bin`，具体工具链由部署者准备。
 
 每次前台执行创建独立进程组，stdin 直接关闭，避免命令等待交互输入。达到 timeout 时向该进程组发送终止信号，最多等待 1 秒后发送强制终止信号，再有界收尾并返回已有输出；不无限等待进程退出。HTTP 连接意外断开或客户端停止等待，不推断为命令已取消，执行仍受原 timeout 约束；不自动重跑。第一版不增加跨 HTTP 请求的取消通知路由，也不承诺传输断线后的结果重放或自动去重。
 
@@ -262,18 +262,18 @@ sudo 使用 `sudo -n`，没有免密权限就快速返回失败。不通过 MCP 
 
 启动时拒绝缺失公网 HTTPS 地址、root 身份、缺失强口令初始化状态、无法访问的工作目录和损坏数据库。缺失状态不能自动退回无认证模式。
 
-持久化只保存重启后继续连接所需的四类数据，物理表布局在实现时按所选库确定，不为短期状态单独建设存储层：
+持久化只保存重启后继续连接所需的四类数据，物理表为 `settings`、`clients`、`grants`、`tokens`，schema 版本使用 SQLite `PRAGMA user_version`，不为短期状态单独建设存储层：
 
 | 数据 | 主要内容 |
 | --- | --- |
-| 设置 | 口令哈希、schema 版本、全局授权版本 `authGeneration` |
+| 设置 | 口令哈希、全局授权版本 `authGeneration`（表中字段为 `generation`） |
 | 客户端 | client ID、允许的回调、创建时间和首次用户批准时间 |
 | 连接授权 | 所属客户端、授权版本、撤销状态和固定到期时间 |
 | 令牌 | access/refresh 类型、哈希、授权绑定、到期和刷新消费状态 |
 
 未完成的浏览器事务、一次性授权码和限速窗口放在有上限的内存容器中；服务重启时这些短期状态丢弃，用户重新开始登录。已完成的连接授权和 refresh token 不受影响。数据库事务用于持久令牌轮换及撤销；内存中的授权码必须在异步签发前原子认领，签发失败要求重新授权，不恢复旧码以免重放。
 
-采用事务、外键、索引和有界的过期清理。启用 WAL 时备份通过 SQLite 备份机制或停服一致性复制，不能只复制仍在使用的主数据库文件。升级前备份，schema 迁移失败就停止启动，不清空已有授权。
+采用事务、外键、索引和有界的过期清理。启用 WAL 时备份通过 SQLite 备份机制或停服一致性复制，不能只复制仍在使用的主数据库文件。升级前备份，schema 不受支持或初始化失败就停止启动，不清空已有授权。
 
 运行数据目录权限为 0700，数据库为 0600。执行用户和应用是同一信任主体，因此该用户的任意命令仍可能访问应用可读的数据；文件权限和子进程环境清理不构成对已授权 Shell 的隔离。授予完整免密 sudo 后，该信任范围进一步包含整台 VPS，这符合本项目的权限选择。
 
@@ -298,7 +298,7 @@ sudo 使用 `sudo -n`，没有免密权限就快速返回失败。不通过 MCP 
 
 systemd 配置不能无条件启用会阻止 sudo 的 `NoNewPrivileges` 或与预期系统访问冲突的文件系统保护选项；单元限制需要与“可选免密 sudo”这一已确认要求一致。
 
-## 12. 实现组织建议
+## 12. 实现组织
 
 采用单进程服务和单个本地数据库，避免为此增加 Worker、Redis 或单独的身份平台。HTTP 层使用一个薄路由层，MCP 处理交给官方 SDK。
 
@@ -306,14 +306,14 @@ systemd 配置不能无条件启用会阻止 sudo 的 `NoNewPrivileges` 或与�
 
 | 模块 | 职责 |
 | --- | --- |
-| `config` | 配置读取、启动验证与限制 |
-| `http` | 路由、请求体限制、Origin/Host 校验及错误映射 |
-| `mcp` | server instructions、六个工具注册和结果格式 |
-| `execution` | Shell 启动、环境、管道、进程组、timeout 和并发 |
-| `filesystem` | 路径、目录、文本与二进制文件操作 |
-| `oauth` | 发现、DCR、浏览器事务、授权码、token 与全部撤销 |
-| `storage` | SQLite 表、事务、迁移、清理及备份接口 |
-| `admin` | 本地初始化口令与授权管理 |
+| `config.ts` | 配置读取、启动验证与限制 |
+| `app.ts` | 路由、请求体限制、Origin/Host 校验及错误映射 |
+| `tools.ts` | server instructions、六个工具注册和结果格式 |
+| `execution.ts` | Shell 启动、环境、管道、进程组、timeout 和并发 |
+| `filesystem.ts` | 路径、目录、文本与二进制文件操作 |
+| `oauth.ts`、`app.ts` | 发现、DCR、浏览器事务、授权码、token 与全部撤销 |
+| `store.ts` | SQLite 表、事务、schema 版本检查和清理；备份按运维文档停服复制 |
+| `admin.ts` | 本地初始化口令与授权管理 |
 
 核心业务不依赖 Cloudflare API；换用其他公网入口时，只需调整入口和 `publicBaseUrl`，变更 issuer 后重新连接授权。
 
@@ -344,9 +344,9 @@ Claude 的远程连接由 Anthropic 云端发起，即使用户在桌面或手�
 
 ## 14. 实施顺序与部署时填写的信息
 
-先确定并锁定依赖，用正式 Tunnel 做一个最小 OAuth 接入验证：发现、DCR、PKCE、强口令授权、测试工具调用、刷新及应用重启后继续连接。先确认真实 ChatGPT 和 Claude 都能走通这条路径，再实现全部命令与文件工具及部署管理，避免最后才发现客户端不接受认证参数。开发验证只用无副作用的测试工具，不公开无认证执行入口。
+实施顺序与完成状态以 [PLAN.md](PLAN.md) 为准。先用正式 Tunnel 和临时无副作用工具确认两端认证及调用，再实现六个正式工具。两端核心执行与文件读写删除已通过；真实客户端刷新、撤销等剩余项目仍单列验收，没有以基础互通代替完整链路。开发验证不公开无认证执行入口。
 
-仅凭设计文档可以判断标准路径存在，不能声称已验证当前 SDK 的集成、客户端账号可用性或手机端入口。实现过程中以这次最小验证决定需要补充的兼容能力。
+验证记录分别标明本地自动化、VPS 隔离自检与用户实测。未记录的网页/app/手机端入口及账号范围不推断为已验证；兼容机制只根据实际问题补充。
 
 开始编码不需要继续扩展需求。部署时填写以下信息即可：
 
@@ -356,7 +356,7 @@ Claude 的远程连接由 Anthropic 云端发起，即使用户在桌面或手�
 - ChatGPT/Claude 选用 DCR（自动注册），记录其实际回调 URI。
 - 用户通过本地初始化入口设置的强口令，不在设计文档或聊天中收集。
 
-本次产物仅为这份设计方案；尚未编写应用、安装依赖、修改 VPS、配置 Tunnel 或执行客户端验收。
+上述部署信息只写入私有配置或本地管理状态。公开仓库不保存实际口令、token、数据库、SSH 登录信息或 Cloudflare Tunnel 凭据。完整安装与运维步骤见 [部署说明](docs/deployment.md) 和 [运维说明](docs/operations.md)。
 
 ## 15. 审查结论
 
@@ -364,4 +364,4 @@ Claude 的远程连接由 Anthropic 云端发起，即使用户在桌面或手�
 
 复杂度主要集中在 OAuth，这是客户端协议接入的成本。第一版只选一条 DCR 路径，保留成熟库能够覆盖的协议校验、刷新与基本限制，不实现多种注册方式、特权进程管理器、取消分发、细粒度授权管理或可插拔框架。模块清单只是职责划分，可以合并到少量文件。
 
-可行性尚待实测的是所选 SDK、真实客户端账号与正式 Tunnel 的组合，尤其 DCR 参数、刷新及客户端等待时间。超时和信号是有界执行控制，不是对 sudo 命令和全部后代的强制隔离保证。下一阶段先做最小 OAuth 接入验证，再完成工具实现；不靠继续扩充设计文档来替代验证。
+所选 SDK、正式 Tunnel 与两端核心功能已有实际证据；刷新、撤销、客户端等待时间及恢复流程仍按计划完成验收。超时和信号是有界执行控制，不是对 sudo 命令和全部后代的强制隔离保证。首个实现标签作为预览快照发布，不等同于所有验收项均完成。

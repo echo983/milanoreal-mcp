@@ -1,0 +1,32 @@
+{
+  "name": "milanoreal-mcp",
+  "version": "0.1.0-preview.1",
+  "private": true,
+  "type": "module",
+  "description": "Single-user persistent VPS environment over authenticated remote MCP",
+  "engines": {
+    "node": ">=24.22.0 <25"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "check": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.test.json",
+    "test": "tsx --test test/*.test.ts",
+    "test:browser": "tsx --test test/browser.spec.ts",
+    "start": "node dist/main.js",
+    "dev": "tsx src/main.ts",
+    "admin": "tsx src/admin.ts"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "1.32.1",
+    "@node-rs/argon2": "2.2.2",
+    "express": "5.3.0",
+    "zod": "4.6.7"
+  },
+  "devDependencies": {
+    "@types/express": "5.0.6",
+    "@types/node": "24.19.2",
+    "playwright-core": "1.64.1",
+    "tsx": "4.23.15",
+    "typescript": "7.0.2"
+  }
+}

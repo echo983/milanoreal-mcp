@@ -1,0 +1,18 @@
+[Unit]
+Description=Milanoreal persistent VPS MCP environment
+After=network.target
+
+[Service]
+Type=simple
+User=mcp
+Group=mcp
+WorkingDirectory=/home/mcp/workspace
+ExecStart=/opt/milanoreal-node/bin/node /opt/milanoreal-mcp/dist/main.js /etc/milanoreal-mcp/config.json
+Restart=on-failure
+RestartSec=5
+KillMode=control-group
+TimeoutStopSec=10
+UMask=0077
+
+[Install]
+WantedBy=multi-user.target
