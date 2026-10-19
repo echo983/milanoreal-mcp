@@ -184,3 +184,7 @@ Claude 的错误为 `The connector's server isn't responding. You can try again.
 ## 正式授权撤销后的客户端验收
 
 两端自动刷新确认后，用户明确同意立即执行正式 `revoke-all`。管理员通过交互式管理命令输入 `REVOKE`，命令返回 `All authorizations revoked.`。随后只读查询正式数据库的非敏感汇总：授权版本为 2，仍有口令配置，当前有效授权数为 0，已批准客户端数为 2。公网 `/healthz` 返回 200。未读取或输出口令、令牌及其哈希、客户端 ID；未更改口令或重启服务。两端旧连接被拒绝及重新登录后的实际工具结果仍待用户确认。
+
+用户随后报告：ChatGPT 原连接首次 ping 返回 `Authentication for Sandbox Milano was requested and accepted. Retry this tool call now.`，`isError: true`；没有直接得到工具结果，也没有手动重试。Claude 原会话首次尝试时，全部 Milano 工具在该轮未加载，错误为 `Tool 'mcp__Sandbox_Milano__container_ping' is not available in this turn`；它没有发出到 MCP 服务的调用，因此不能把此现象当成旧令牌收到 HTTP 401。首次汇总查询仅 ChatGPT 有一项新授权，授权版本 2，最近 access 于 2026-10-19 08:27:57 UTC 签发；Claude 此时尚无新授权。
+
+用户再次报告 Claude 已重新加载 Milano，ChatGPT 按连接器提示再次调用；两端 `container_ping` 均成功，返回 `ok: true`、用户 `mcp`、uid 1001、工作区 `/home/mcp/workspace`、Shell `/bin/bash`、Node v24.22.0。2026-10-19 08:33 UTC，只读查询确认两个客户端各有一项当前有效授权，授权版本均为 2；Claude 最近 access 于 08:32:40 UTC 签发。可确认正式撤销后两端重新取得授权并恢复调用。未独立核实 Claude 的页面操作路径，也不把其工具加载错误归因于授权失效。原授权因版本递增而失效的行为由服务端状态与自动化认证测试支撑，未直接捕获 Claude 旧令牌的 HTTP 拒绝响应。
