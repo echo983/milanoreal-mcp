@@ -188,3 +188,11 @@ Claude 的错误为 `The connector's server isn't responding. You can try again.
 用户随后报告：ChatGPT 原连接首次 ping 返回 `Authentication for Sandbox Milano was requested and accepted. Retry this tool call now.`，`isError: true`；没有直接得到工具结果，也没有手动重试。Claude 原会话首次尝试时，全部 Milano 工具在该轮未加载，错误为 `Tool 'mcp__Sandbox_Milano__container_ping' is not available in this turn`；它没有发出到 MCP 服务的调用，因此不能把此现象当成旧令牌收到 HTTP 401。首次汇总查询仅 ChatGPT 有一项新授权，授权版本 2，最近 access 于 2026-10-19 08:27:57 UTC 签发；Claude 此时尚无新授权。
 
 用户再次报告 Claude 已重新加载 Milano，ChatGPT 按连接器提示再次调用；两端 `container_ping` 均成功，返回 `ok: true`、用户 `mcp`、uid 1001、工作区 `/home/mcp/workspace`、Shell `/bin/bash`、Node v24.22.0。2026-10-19 08:33 UTC，只读查询确认两个客户端各有一项当前有效授权，授权版本均为 2；Claude 最近 access 于 08:32:40 UTC 签发。可确认正式撤销后两端重新取得授权并恢复调用。未独立核实 Claude 的页面操作路径，也不把其工具加载错误归因于授权失效。原授权因版本递增而失效的行为由服务端状态与自动化认证测试支撑，未直接捕获 Claude 旧令牌的 HTTP 拒绝响应。
+
+## v0.1.0 正式发布
+
+版本从 `0.1.0-preview.1` 统一为 `0.1.0`，锁文件与部署文档同步。发布前本地通过类型检查、30 项自动化测试、1 项真实 Chromium 授权回归、构建，以及默认和 `--recovery` 隔离自检。将构建、包元数据、锁文件和诊断脚本打包，核对传输前后的 SHA-256；在 VPS 预装锁定的生产依赖，以 `mcp` 用户完成隔离自检。
+
+切换前确认专用用户仅有 MCP 服务进程，没有其他活跃任务。短暂停服后，将配置、完整认证状态、工作区和 systemd 单元归档到 root 私有目录，保留旧应用目录；再安装 `v0.1.0` 构建并启动服务。启动后本地健康检查和隔离自检通过；公网 `/healthz` 返回 200，OAuth 发现的 issuer 为 `https://milano.cambian.art`，匿名 `/mcp` 返回 401。两项正式有效授权及版本 2 保留，服务与 cloudflared 均 active、无重启失败。部署后的 `--recovery` 隔离自检亦通过。正式配置权限校正为目录 `root:mcp 0750`、文件 `root:mcp 0640`，认证数据库保持 `mcp:mcp 0600`。备份位于 `/var/backups/milanoreal-release.5VsjMr`，目录 0700、归档 0600；未恢复正式数据。
+
+这些检查验证新构建启动和授权状态保留；未在版本切换后再次由 ChatGPT、Claude 各调用工具，因此不把之前的客户端实测记作新构建的单独回归。服务代码与已实测的六工具实现相同，此次主要统一版本元数据并更新文档。

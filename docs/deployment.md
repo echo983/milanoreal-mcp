@@ -29,7 +29,7 @@ node --version
 ```bash
 git clone https://github.com/echo983/milanoreal-mcp.git
 cd milanoreal-mcp
-git checkout v0.1.0-preview.1
+git checkout v0.1.0
 npm ci
 npm run check
 npm test

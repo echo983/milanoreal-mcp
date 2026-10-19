@@ -2,7 +2,7 @@
 
 让 ChatGPT / Claude 通过远程 MCP 使用 VPS 上的持久执行环境。
 
-当前预览标签：`v0.1.0-preview.1`。原始设计基线：`v0.1.0-design`。本项目直接操作 Linux VPS，文件和依赖长期保留，每次命令独立启动 Bash，任务进度使用项目自己的 `PROGRESS.md`。
+当前正式版本：`v0.1.0`，已部署到 Milano VPS。原始设计基线：`v0.1.0-design`。本项目直接操作 Linux VPS，文件和依赖长期保留，每次命令独立启动 Bash，任务进度使用项目自己的 `PROGRESS.md`。
 
 已实现并部署六个正式工具。ChatGPT 和 Claude 均已通过正式域名完成认证、命令执行、文件写入、读取和删除的用户实测。两端目录列表、服务重启后的继续调用、access token 到期后的自动刷新，以及正式撤销后取得新授权并再次调用 ping 均已确认。同步调用在 ChatGPT 的 50 秒测试及 Claude 的 10/30 秒测试中成功；Claude 的 50 秒测试曾遇到一次连接器错误，原因待定位。自动化检查与实际客户端验收分别记录，见 [PLAN.md](PLAN.md) 和 [验证记录](docs/verification.md)。设计见 [DESIGN.md](DESIGN.md)。
 
@@ -118,7 +118,7 @@ sudo -u mcp /opt/milanoreal-node/bin/node /opt/milanoreal-mcp/dist/admin.js revo
 node deploy/smoke.mjs
 ```
 
-当前未发布改动另提供 `node deploy/smoke.mjs --recovery`：将临时应用、配置、认证状态与项目归档，删除原副本后从归档恢复验证。该模式已在本地与目标 VPS 通过；不读取正式配置或数据库。`v0.1.0-preview.1` 的原始脚本尚无此参数，需使用更新后的脚本。
+`v0.1.0` 另提供 `node deploy/smoke.mjs --recovery`：将临时应用、配置、认证状态与项目归档，删除原副本后从归档恢复验证。该模式已在本地与目标 VPS 通过；不读取正式配置或数据库。
 
 ## 更新与备份
 
@@ -126,4 +126,4 @@ node deploy/smoke.mjs
 
 恢复时同样停服，恢复完整状态目录和对应配置，核对所有者 `mcp:mcp`、目录 0700 和数据库 0600 后再启动。不用只拷贝活跃数据库主文件的方式备份。
 
-具体命令见 [运维与恢复](docs/operations.md)。隔离恢复演练已通过，正式数据的替换式恢复未执行；两端已通过的核心功能和验证边界见 [客户端验收](docs/client-validation.md)。`v0.1.0-preview.1` 是早期实现快照，不包含后续验收记录。生产更新先通过类型检查、测试与构建，不把历史标签本身当作最新验收状态。
+具体命令见 [运维与恢复](docs/operations.md)。隔离恢复演练已通过，正式数据的替换式恢复未执行；两端已通过的核心功能和验证边界见 [客户端验收](docs/client-validation.md)。生产更新先通过类型检查、测试与构建。
