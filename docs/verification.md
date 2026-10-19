@@ -176,3 +176,7 @@ Claude 的错误为 `The connector's server isn't responding. You can try again.
 ## 专用用户获得免密 sudo
 
 此前“未授予 sudo”的记录对应部署初期。用户随后明确要求授予 `mcp` sudo 权限。管理员先确认目标规则文件不存在且现有 sudoers 语法正常，再安装 root 拥有、权限 0440 的 `/etc/sudoers.d/milanoreal-mcp`，内容为 `mcp ALL=(ALL:ALL) NOPASSWD:ALL`。新规则及整份 sudoers 均通过 `visudo` 语法检查；以 `mcp` 身份执行 `sudo -n id -u` 返回 `0`，`sudo -l -U mcp` 显示 `(ALL : ALL) NOPASSWD: ALL`。未更改 MCP 服务的运行身份、授权数据库或应用代码；已认证的 Shell 命令现在可显式使用 `sudo -n` 提权。
+
+## 两端实际自动刷新
+
+用户在原访问令牌到期后，分别沿用 ChatGPT 与 Claude 的现有连接调用 `container_ping`。两端都返回 `ok: true`、用户 `mcp`（uid 1001）、工作区 `/home/mcp/workspace`、Shell `/bin/bash`、Node v24.22.0；Claude 明确报告未遇到登录或授权提示，也未手动重连。随后开发侧仅查询正式数据库的客户端类别、有效授权数、已消费 refresh 数及最新 access 签发时间，不读取或输出令牌值、哈希、口令或 client ID。2026-10-19 00:41 UTC，ChatGPT 与 Claude 各有一项有效授权、各有一次已消费 refresh；新 access 分别于 00:33:42 UTC、00:40:32 UTC 签发。此前 00:18 UTC 查询时两端该计数均为 0，且原 access 分别于 00:30:43 UTC、00:35:57 UTC 到期。这同时证明两端在正式环境中完成了至少一次自然刷新和后续认证调用；不推断长期多次轮换或其他未测试入口。

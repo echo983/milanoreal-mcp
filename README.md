@@ -4,7 +4,7 @@
 
 当前预览标签：`v0.1.0-preview.1`。原始设计基线：`v0.1.0-design`。本项目直接操作 Linux VPS，文件和依赖长期保留，每次命令独立启动 Bash，任务进度使用项目自己的 `PROGRESS.md`。
 
-已实现并部署六个正式工具。ChatGPT 和 Claude 均已通过正式域名完成认证、命令执行、文件写入、读取和删除的用户实测。两端目录列表及服务重启后的继续调用也已确认通过。同步调用在 ChatGPT 的 50 秒测试及 Claude 的 10/30 秒测试中成功；Claude 的 50 秒测试曾遇到一次连接器错误，原因待定位；刷新与撤销验证仍待完成。自动化检查与实际客户端验收分别记录，见 [PLAN.md](PLAN.md) 和 [验证记录](docs/verification.md)。设计见 [DESIGN.md](DESIGN.md)。
+已实现并部署六个正式工具。ChatGPT 和 Claude 均已通过正式域名完成认证、命令执行、文件写入、读取和删除的用户实测。两端目录列表、服务重启后的继续调用及 access token 到期后的自动刷新也已确认通过。同步调用在 ChatGPT 的 50 秒测试及 Claude 的 10/30 秒测试中成功；Claude 的 50 秒测试曾遇到一次连接器错误，原因待定位；撤销后重新登录仍待验证。自动化检查与实际客户端验收分别记录，见 [PLAN.md](PLAN.md) 和 [验证记录](docs/verification.md)。设计见 [DESIGN.md](DESIGN.md)。
 
 | 文档 | 用途 |
 | --- | --- |
