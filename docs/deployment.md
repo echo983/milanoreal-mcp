@@ -66,6 +66,8 @@ sudo env PATH=/opt/milanoreal-node/bin:/usr/bin:/bin /opt/milanoreal-node/bin/np
 
 `mcp` 默认没有 sudo。若部署者选择授予免密 sudo，通过自己的 sudoers 管理流程配置并用 `sudo -n` 验证。应用不会修改 sudoers，也不接受 sudo 密码。
 
+当前 Milano VPS 已选择授予：`/etc/sudoers.d/milanoreal-mcp` 为 root 拥有、权限 0440，规则为 `mcp ALL=(ALL:ALL) NOPASSWD:ALL`。已通过 `visudo -c`，并由 `mcp` 实际运行 `sudo -n id -u` 得到 `0`。这使经 MCP 调用的 Shell 命令可以显式提权；仅部署在完全信任该 MCP 授权范围的主机上。
+
 ## 4. 配置与初始化
 
 ```bash

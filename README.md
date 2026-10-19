@@ -56,6 +56,8 @@ node dist/main.js /absolute/path/config.json
 
 安装目录由管理员管理；`mcp` 对状态目录和工作目录有写权限。服务使用 `UMask=0077`。不会自动给 `mcp` 授予 sudo。
 
+当前 Milano VPS 已由管理员在 `/etc/sudoers.d/milanoreal-mcp` 授予 `mcp` 对所有用户和命令的免密 sudo；服务仍以 `mcp` 身份运行，需要提权时在 Shell 命令中显式使用 `sudo -n`。
+
 管理员通过自己的 SSH 终端为专用用户设置口令：
 
 ```bash

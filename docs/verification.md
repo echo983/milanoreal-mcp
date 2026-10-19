@@ -172,3 +172,7 @@ Claude 的错误为 `The connector's server isn't responding. You can try again.
 用户随后报告 ChatGPT 和 Claude 均直接在原连接调用 `container_ping` 成功，未手动重连、重新登录或遇到授权提示。Claude 返回的用户、工作区及运行时与首次 ping 一致；ChatGPT 返回 `ok: true`、用户 `mcp`、工作区 `/home/mcp/workspace`。因此两端服务重启后的客户端续用通过。此次成功也表明此前 Claude 的单次 50 秒连接器错误没有使当前连接或授权失效，但不能据此推断那条命令的实际执行结果。
 
 2026-10-19 00:18 UTC 后再次只读查询正式数据库汇总：两端各有一项当前有效授权、已消费 refresh 数均为 0，最近 access 签发时间仍分别为 2026-10-18 23:30:43 UTC、23:35:57 UTC。按服务端 1 小时有效期，原 access token 分别到 2026-10-19 00:30:43 UTC、00:35:57 UTC 才到期。这两次 ping 验证了重启后现有有效授权可用，尚未验证到期后的自动刷新。可在 2026-10-19 00:37 UTC 之后（马德里 02:37）仅通过现有连接各调用一次 ping，再结合汇总刷新记录验证自然刷新；不手动断开或重新授权。正式全部撤销安排在刷新验收之后，避免先撤销导致无法验证这批授权的自然刷新。
+
+## 专用用户获得免密 sudo
+
+此前“未授予 sudo”的记录对应部署初期。用户随后明确要求授予 `mcp` sudo 权限。管理员先确认目标规则文件不存在且现有 sudoers 语法正常，再安装 root 拥有、权限 0440 的 `/etc/sudoers.d/milanoreal-mcp`，内容为 `mcp ALL=(ALL:ALL) NOPASSWD:ALL`。新规则及整份 sudoers 均通过 `visudo` 语法检查；以 `mcp` 身份执行 `sudo -n id -u` 返回 `0`，`sudo -l -U mcp` 显示 `(ALL : ALL) NOPASSWD: ALL`。未更改 MCP 服务的运行身份、授权数据库或应用代码；已认证的 Shell 命令现在可显式使用 `sudo -n` 提权。
